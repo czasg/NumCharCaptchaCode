@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from model.cnn.CNN import CNN
+from collections import deque
 from functools import partial, reduce
 
 
@@ -118,6 +119,9 @@ class SouGouWechat(CNN):
             batch_x[index, :] = imageArray.flatten() / 255
             batch_y[index, :] = self.linear(label)
         return batch_x, batch_y
+
+    def get_batch_by_step(self, test=False, size=100, step=10):
+        pass
 
     def train(self):
         trainStep, prediction = self.model()
