@@ -76,7 +76,7 @@ class SouGouWechat(CNN):
 
         charAccuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correct_prediction, tf.float32), axis=1))
-        return charAccuracy, imgAccuracy
+        return pre, tru, charAccuracy, imgAccuracy
 
     def saver(self, sess, saver=None):
         if saver:
@@ -115,6 +115,9 @@ class SouGouWechat(CNN):
                 label, imageArray = self.yieldValidBatch()
             else:
                 label, imageArray = self.yieldTrainBatch()
+            offset = self.labelLen - len(label)
+            if offset:
+                label += ' ' * offset
             imageArray = self.img2gray(imageArray)
             batch_x[index, :] = imageArray.flatten() / 255
             batch_y[index, :] = self.linear(label)
@@ -125,7 +128,7 @@ class SouGouWechat(CNN):
 
     def train(self):
         trainStep, prediction = self.model()
-        charAccuracy, imgAccuracy = self.valid(prediction)
+        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
