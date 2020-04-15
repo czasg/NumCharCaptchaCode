@@ -66,7 +66,6 @@ class CNN(object):
         conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
         conv2 = tf.nn.dropout(conv2, self.keep_prob)
 
-        # �����3
         wc3 = tf.get_variable(name='wc3', shape=[3, 3, 64, 128], dtype=tf.float32,
                               initializer=tf.contrib.layers.xavier_initializer())
         bc3 = tf.Variable(self.b_alpha * tf.random_normal([128]))
@@ -76,7 +75,6 @@ class CNN(object):
         print(">>> convolution 3: ", conv3.shape)
         next_shape = conv3.shape[1] * conv3.shape[2] * conv3.shape[3]
 
-        # ȫ���Ӳ�1
         wd1 = tf.get_variable(name='wd1', shape=[next_shape, 1024], dtype=tf.float32,
                               initializer=tf.contrib.layers.xavier_initializer())
         bd1 = tf.Variable(self.b_alpha * tf.random_normal([1024]))
@@ -92,3 +90,5 @@ class CNN(object):
             y_predict = tf.add(tf.matmul(dense, wout), bout)
 
         return y_predict
+
+
