@@ -44,7 +44,7 @@ class SouGouWechat(CNN):
         with tf.name_scope('sgParams'):
             self.x = tf.placeholder(tf.float32, [None, self.width * self.height])
             self.y = tf.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
-            self.keepProb = tf.placeholder("float")
+            self.keepProb = tf.placeholder(tf.float32)
 
     def model(self):
         img = tf.reshape(self.x, [-1, self.height, self.width, 1])  # 1d -> 4d
@@ -56,12 +56,12 @@ class SouGouWechat(CNN):
         length = int(reduce(lambda x, y: x * y, conv.shape[1:]))
         x = tf.reshape(conv, [-1, length])  # 4d -> 1d
 
-        prediction, p = self.fullConnect(
+        prediction = self.fullConnect(
             x, length, 1024, self.labelLen * self.labelSet.__len__(), self.keepProb
         )  # 全连接层
 
         crossEntropy = tf.reduce_mean(
-            -tf.reduce_sum(self.y * tf.log(p))
+            -tf.reduce_sum(self.y * tf.log(prediction))
         )  # 交叉熵
 
         trainStep = tf.train.AdamOptimizer(1e-4).minimize(crossEntropy)
@@ -117,9 +117,20 @@ class SouGouWechat(CNN):
                 label, imageArray = self.yieldValidBatch()
             else:
                 label, imageArray = self.yieldTrainBatch()
+
+            # offset = self.labelLen - len(label)
+            # if offset:
+            #     label += ' ' * offset
+
+            # if (self.labelLen - len(label)) != 0:
+            #     print(label)
+            #     continue
+
             offset = self.labelLen - len(label)
-            if offset:
+            if offset > 0:
                 label += ' ' * offset
+
+            # print([label])
             imageArray = self.img2gray(imageArray)
             batch_x[index, :] = imageArray.flatten() / 255
             batch_y[index, :] = self.linear(label)
@@ -133,11 +144,13 @@ class SouGouWechat(CNN):
 
     def train(self):
         trainStep, prediction = self.model()
-        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
+        # pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
+        # print(prediction)  # Tensor("add_4:0", shape=(?, 222), dtype=float32)
+        cza_predict = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            saver = self.saver(sess)
+            # saver = self.saver(sess)
 
             for index in range(self.cycle_loop):
                 batch_x, batch_y = self.get_batch()
@@ -148,12 +161,17 @@ class SouGouWechat(CNN):
                     self.keepProb: 0.5
                 })
 
-                predict_text, tru_text = sess.run([pre, tru], feed_dict={
-                    self.x: batch_x,
-                    self.y: batch_y,
-                    self.keepProb: 1
+                img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
+                img_array = np.array(img)
+                test_image = self.img2gray(img_array)
+                test_image = test_image.flatten() / 255
+                predict_text = sess.run(cza_predict, feed_dict={
+                    self.x: [test_image],
+                    self.keepProb: 1.
                 })
-                print([self.list2text(predict_text), self.list2text(tru_text)])
+                print(predict_text,  self.list2text(predict_text))
+
+                # print([self.list2text(predict_text), self.list2text(tru_text)])
 
                 # if index % 10 == 0:
                 #     valid_x, valid_y = self.get_batch(test=True)
@@ -168,10 +186,10 @@ class SouGouWechat(CNN):
                 #         self.keepProb: 1.
                 #     })
                 #     print("字符准确率为 {:.5f} 图片准确率为 {:.5f}".format(acc_char, acc_image))
-
-                if index % 500 == 0:
-                    self.saver(sess, saver)
-            self.saver(sess, saver)
+                #
+                # if index % 500 == 0:
+                #     self.saver(sess, saver)
+            # self.saver(sess, saver)
 
     def predict(self, img):
         img_array = np.array(img)
@@ -189,8 +207,3 @@ class SouGouWechat(CNN):
 
 if __name__ == '__main__':
     SouGouWechat().train()
-
-    # sg = SouGouWechat()
-    # for _ in range(50):
-    #     label, imageArray = sg.yieldTrainBatch()
-    #     print(label)

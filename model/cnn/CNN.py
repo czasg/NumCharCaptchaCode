@@ -36,7 +36,7 @@ class CNN(Model):
         x = self.addLayer(x, [row, col], [col], tf.nn.relu)
         x = tf.nn.dropout(x, keep_prob)
         x = self.addLayer(x, [col, output], [output])
-        return x, tf.nn.softmax(x)
+        return x
 
     @staticmethod
     def demo():
