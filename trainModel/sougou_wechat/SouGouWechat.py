@@ -1,11 +1,13 @@
 # coding: utf-8
 import os
+import re
 import random
 import numpy as np
 import tensorflow as tf
+
 from PIL import Image
 from model.cnn.CNN import CNN
-from collections import deque
+from io import BytesIO, StringIO
 from functools import partial, reduce
 
 
@@ -30,6 +32,7 @@ class SouGouWechat(CNN):
 
         self.yieldTrainBatchHandler = None
         self.yieldValidBatchHandler = None
+        self.predictSess = None
 
     def initPath(self):
         curPath = os.path.dirname(os.path.abspath(__file__))
@@ -60,11 +63,12 @@ class SouGouWechat(CNN):
             x, length, 1024, self.labelLen * self.labelSet.__len__(), self.keepProb
         )  # 全连接层
 
-        crossEntropy = tf.reduce_mean(
-            -tf.reduce_sum(self.y * tf.log(prediction))
-        )  # 交叉熵
-
-        trainStep = tf.train.AdamOptimizer(1e-4).minimize(crossEntropy)
+        with tf.name_scope('cost'):
+            crossEntropy = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(logits=prediction, labels=self.y)
+            )
+        with tf.name_scope('train'):
+            trainStep = tf.train.AdamOptimizer(1e-4).minimize(crossEntropy)
         return trainStep, prediction
 
     def valid(self, prediction):
@@ -73,10 +77,10 @@ class SouGouWechat(CNN):
         pre = tf.argmax(predict, 2)
         tru = tf.argmax(truth, 2)
 
-        correct_prediction = tf.equal(pre, tru)
+        correctPrediction = tf.equal(pre, tru)
 
-        charAccuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correct_prediction, tf.float32), axis=1))
+        charAccuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32))
+        imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))
         return pre, tru, charAccuracy, imgAccuracy
 
     def saver(self, sess, saver=None):
@@ -118,19 +122,12 @@ class SouGouWechat(CNN):
             else:
                 label, imageArray = self.yieldTrainBatch()
 
-            # offset = self.labelLen - len(label)
-            # if offset:
-            #     label += ' ' * offset
-
-            # if (self.labelLen - len(label)) != 0:
-            #     print(label)
-            #     continue
-
             offset = self.labelLen - len(label)
             if offset > 0:
                 label += ' ' * offset
+            elif offset < 0:
+                continue
 
-            # print([label])
             imageArray = self.img2gray(imageArray)
             batch_x[index, :] = imageArray.flatten() / 255
             batch_y[index, :] = self.linear(label)
@@ -144,14 +141,7 @@ class SouGouWechat(CNN):
 
     def train(self):
         trainStep, prediction = self.model()
-        # pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
-        # print(prediction)  # Tensor("add_4:0", shape=(?, 222), dtype=float32)
-        cza_predict = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
-
-        img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
-        img_array = np.array(img)
-        test_image = self.img2gray(img_array)
-        test_image = test_image.flatten() / 255
+        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
@@ -166,49 +156,74 @@ class SouGouWechat(CNN):
                     self.keepProb: 0.5
                 })
 
-                # img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
-                # img_array = np.array(img)
-                # test_image = self.img2gray(img_array)
-                # test_image = test_image.flatten() / 255
-                predict_text = sess.run(cza_predict, feed_dict={
-                    self.x: [test_image],
+                valid_x, valid_y = self.get_batch(size=1)
+                textListPre, textListTru = sess.run([pre, tru], feed_dict={
+                    self.x: valid_x,
+                    self.y: batch_y,
                     self.keepProb: 1.
                 })
-                print(predict_text,  self.list2text(predict_text))
+                print(self.list2text(textListPre), self.list2text(textListTru))
 
-                # print([self.list2text(predict_text), self.list2text(tru_text)])
+                if index % 10 == 0:
+                    # valid_x, valid_y = self.get_batch(test=True)
+                    acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
+                        self.x: batch_x,
+                        self.y: batch_y,
+                        self.keepProb: 1.
+                    })
+                    print(f"图片准确率为 {acc_image: <.5F} - 字符准确率为 {acc_char: <.5F}")
 
-                # if index % 10 == 0:
-                #     valid_x, valid_y = self.get_batch(test=True)
-                #     acc_char = sess.run(charAccuracy, feed_dict={
-                #         self.x: valid_x,
-                #         self.y: valid_y,
-                #         self.keepProb: 1.
-                #     })
-                #     acc_image = sess.run(imgAccuracy, feed_dict={
-                #         self.x: valid_x,
-                #         self.y: valid_y,
-                #         self.keepProb: 1.
-                #     })
-                #     print("字符准确率为 {:.5f} 图片准确率为 {:.5f}".format(acc_char, acc_image))
-                #
                 if index % 500 == 0:
                     self.saver(sess, saver)
             self.saver(sess, saver)
 
     def predict(self, img):
-        img_array = np.array(img)
-        test_image = self.convert2gray(img_array)
-        test_image = test_image.flatten() / 255
+        if isinstance(img, str):  # base64
+            img = Image.open(StringIO(re.sub('^data:image/.+?;base64,', '', img)))
+        elif isinstance(img, bytes):
+            img = Image.open(BytesIO(img))
+        imgArray = np.array(img)
+        imageGray = self.img2gray(imgArray)
+        imageMat = imageGray.flatten() / 255
 
-        trainStep, prediction = self.model()
-        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
+        if not self.predictSess:
+            prediction = self.model()[1]
+            pre = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
+            self.predictSess = (tf.Session(), pre)
+            self.saver(self.predictSess)
+        sess, pre = self.predictSess
+        matList = sess.run(pre, feed_dict={
+            self.x: [imageMat],
+            self.keepProb: 1.
+        })
+        return self.list2text(matList)
+
+    def predictTest(self, img):
+        if isinstance(img, str):  # base64
+            img = Image.open(StringIO(re.sub('^data:image/.+?;base64,', '', img)))
+        elif isinstance(img, bytes):
+            img = Image.open(BytesIO(img))
+        imgArray = np.array(img)
+        imageGray = self.img2gray(imgArray)
+        imageMat = imageGray.flatten() / 255
+
+        prediction = self.model()[1]
+        pre = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            saver = self.saver(sess)
+            self.saver(sess)
+            matList = sess.run(pre, feed_dict={
+                self.x: [imageMat],
+                self.keepProb: 1.
+            })
+            return self.list2text(matList)
 
-            sess.run(pre, feed_dict={self.X: [test_image], self.keep_prob: 1.})
+    def test(self):
+        img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
+        print(self.predictTest(img))
 
 
 if __name__ == '__main__':
     SouGouWechat().train()
+
+    # SouGouWechat().test()
