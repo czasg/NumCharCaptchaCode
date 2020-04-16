@@ -25,7 +25,7 @@ class Model:
 
     @staticmethod
     def label2vec(label, labelLen, labelSet):
-        assert len(label) <= labelLen, "标签长度超过了定义的长度"
+        assert len(label) <= labelLen, f"标签长度超过了定义的长度: '{label}'.__len__() > {labelLen}"
         vector = np.zeros(labelLen * len(labelSet))
         for i, ch in enumerate(label):
             idx = i * len(labelSet) + labelSet.index(ch)

@@ -1,5 +1,6 @@
 # coding: utf-8
 import os
+import random
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -55,12 +56,12 @@ class SouGouWechat(CNN):
         length = int(reduce(lambda x, y: x * y, conv.shape[1:]))
         x = tf.reshape(conv, [-1, length])  # 4d -> 1d
 
-        prediction = self.fullConnect(
+        prediction, p = self.fullConnect(
             x, length, 1024, self.labelLen * self.labelSet.__len__(), self.keepProb
         )  # 全连接层
 
         crossEntropy = tf.reduce_mean(
-            -tf.reduce_sum(self.y * tf.log(prediction))
+            -tf.reduce_sum(self.y * tf.log(p))
         )  # 交叉熵
 
         trainStep = tf.train.AdamOptimizer(1e-4).minimize(crossEntropy)
@@ -92,6 +93,7 @@ class SouGouWechat(CNN):
 
     def yieldBatch(self, pathDir):
         pool = os.listdir(pathDir)
+        random.shuffle(pool)
         while True:
             for img in pool:
                 image = Image.open(self.filePath(pathDir, img))
@@ -123,8 +125,11 @@ class SouGouWechat(CNN):
             batch_y[index, :] = self.linear(label)
         return batch_x, batch_y
 
-    def get_batch_by_step(self, test=False, size=100, step=10):
-        pass
+    def list2text(self, predict):
+        text = ""
+        for index in predict[0].tolist():
+            text += str(self.labelSet[index])
+        return text
 
     def train(self):
         trainStep, prediction = self.model()
@@ -143,24 +148,49 @@ class SouGouWechat(CNN):
                     self.keepProb: 0.5
                 })
 
-                if index % 10 == 0:
-                    valid_x, valid_y = self.get_batch(test=True)
-                    acc_char = sess.run(charAccuracy, feed_dict={
-                        self.x: valid_x,
-                        self.y: valid_y,
-                        self.keepProb: 1.
-                    })
-                    acc_image = sess.run(imgAccuracy, feed_dict={
-                        self.x: valid_x,
-                        self.y: valid_y,
-                        self.keepProb: 1.
-                    })
-                    print("字符准确率为 {:.5f} 图片准确率为 {:.5f}".format(acc_char, acc_image))
+                predict_text, tru_text = sess.run([pre, tru], feed_dict={
+                    self.x: batch_x,
+                    self.y: batch_y,
+                    self.keepProb: 1
+                })
+                print([self.list2text(predict_text), self.list2text(tru_text)])
+
+                # if index % 10 == 0:
+                #     valid_x, valid_y = self.get_batch(test=True)
+                #     acc_char = sess.run(charAccuracy, feed_dict={
+                #         self.x: valid_x,
+                #         self.y: valid_y,
+                #         self.keepProb: 1.
+                #     })
+                #     acc_image = sess.run(imgAccuracy, feed_dict={
+                #         self.x: valid_x,
+                #         self.y: valid_y,
+                #         self.keepProb: 1.
+                #     })
+                #     print("字符准确率为 {:.5f} 图片准确率为 {:.5f}".format(acc_char, acc_image))
 
                 if index % 500 == 0:
                     self.saver(sess, saver)
             self.saver(sess, saver)
 
+    def predict(self, img):
+        img_array = np.array(img)
+        test_image = self.convert2gray(img_array)
+        test_image = test_image.flatten() / 255
+
+        trainStep, prediction = self.model()
+        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            saver = self.saver(sess)
+
+            sess.run(pre, feed_dict={self.X: [test_image], self.keep_prob: 1.})
+
 
 if __name__ == '__main__':
     SouGouWechat().train()
+
+    # sg = SouGouWechat()
+    # for _ in range(50):
+    #     label, imageArray = sg.yieldTrainBatch()
+    #     print(label)

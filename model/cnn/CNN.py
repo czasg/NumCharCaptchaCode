@@ -36,7 +36,7 @@ class CNN(Model):
         x = self.addLayer(x, [row, col], [col], tf.nn.relu)
         x = tf.nn.dropout(x, keep_prob)
         x = self.addLayer(x, [col, output], [output])
-        return tf.nn.softmax(x)
+        return x, tf.nn.softmax(x)
 
     @staticmethod
     def demo():
@@ -58,10 +58,10 @@ class CNN(Model):
         length = int(reduce(lambda x, y: x * y, conv.shape[1:]))  # 最后一层卷积的多维数据长度
         x = tf.reshape(conv, [-1, length])  # 多维转化为一维
 
-        prediction = cnn.fullConnect(x, length, 1024, 10, keep_prob)  # 全连接层
+        prediction, p = cnn.fullConnect(x, length, 1024, 10, keep_prob)  # 全连接层
 
         cross_entropy = tf.reduce_mean(
-            -tf.reduce_sum(ys * tf.log(prediction))
+            -tf.reduce_sum(ys * tf.log(p))
         )  # 交叉熵
 
         trainStep = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
