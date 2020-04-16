@@ -148,9 +148,14 @@ class SouGouWechat(CNN):
         # print(prediction)  # Tensor("add_4:0", shape=(?, 222), dtype=float32)
         cza_predict = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
 
+        img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
+        img_array = np.array(img)
+        test_image = self.img2gray(img_array)
+        test_image = test_image.flatten() / 255
+
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            # saver = self.saver(sess)
+            saver = self.saver(sess)
 
             for index in range(self.cycle_loop):
                 batch_x, batch_y = self.get_batch()
@@ -161,10 +166,10 @@ class SouGouWechat(CNN):
                     self.keepProb: 0.5
                 })
 
-                img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
-                img_array = np.array(img)
-                test_image = self.img2gray(img_array)
-                test_image = test_image.flatten() / 255
+                # img = Image.open('./img/valid/2a6bd8_1576634610.jpg')
+                # img_array = np.array(img)
+                # test_image = self.img2gray(img_array)
+                # test_image = test_image.flatten() / 255
                 predict_text = sess.run(cza_predict, feed_dict={
                     self.x: [test_image],
                     self.keepProb: 1.
@@ -187,9 +192,9 @@ class SouGouWechat(CNN):
                 #     })
                 #     print("字符准确率为 {:.5f} 图片准确率为 {:.5f}".format(acc_char, acc_image))
                 #
-                # if index % 500 == 0:
-                #     self.saver(sess, saver)
-            # self.saver(sess, saver)
+                if index % 500 == 0:
+                    self.saver(sess, saver)
+            self.saver(sess, saver)
 
     def predict(self, img):
         img_array = np.array(img)
