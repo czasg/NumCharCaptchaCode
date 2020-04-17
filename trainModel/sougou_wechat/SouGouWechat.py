@@ -117,4 +117,6 @@ class SouGouWeChat(CNN):
 
 if __name__ == '__main__':
     # {'abnormal': 0, 'error': 2919, 'right': 24768}
+    # 1、todo: 加入trainNew的路径，应该就是手工打码平台的意思，传入正确的code然后保存到这个路径即可
+    # 2、todo: 如何优先使用trainNew的数据呢，然后训练错误的数据是否有必要重复的优先训练
     SouGouWeChat().train()
