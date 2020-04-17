@@ -12,15 +12,15 @@ from trainModel.utils import catchErrorAndRetunDefault
 from trainModel.sougou_wechat.gatherCaptcha.gather import Manager
 
 
-class SouGouWeChat(CNN):
-    width = 203  # 图片宽度
-    height = 66  # 图片高度
-    labelLen = 7
+class ChuangYu(CNN):
+    width = 139  # 图片宽度
+    height = 60  # 图片高度
+    labelLen = 6
 
     def __init__(self):
-        super(SouGouWeChat, self).__init__()
-        self.predictSess = None
-        self.gatherManager = None
+        super(ChuangYu, self).__init__()
+        # self.predictSess = None
+        # self.gatherManager = None
         self.initPathParams(__file__)
 
     def model(self):
@@ -70,7 +70,7 @@ class SouGouWeChat(CNN):
                     self.y: valid_y,
                     self.keepProb: 1.
                 })
-                print(self.list2text(textListPre), self.list2text(textListTru))
+                print([self.list2text(textListPre), self.list2text(textListTru)])
 
                 if index % 10 == 0:
                     acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
@@ -84,40 +84,6 @@ class SouGouWeChat(CNN):
                     self.saver(sess, saver)
             self.saver(sess, saver)
 
-    def saveCaptcha(self, img):
-        pass
-
-    def nextCaptcha(self):
-        if not self.gatherManager:
-            self.gatherManager = Manager()
-        return self.gatherManager.nextCaptcha()
-
-    @catchErrorAndRetunDefault
-    def predict(self, img):
-        if isinstance(img, str):  # base64
-            img = base64.b64decode(re.sub('^data:image/.+?;base64,', '', img))
-        if isinstance(img, bytes):
-            img = Image.open(BytesIO(img))
-        imgArray = np.array(img)
-        imageGray = self.img2gray(imgArray)
-        imageMat = imageGray.flatten() / 255
-
-        if not self.predictSess:
-            prediction = self.model()[1]
-            pre = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
-            sess = tf.Session()
-            self.predictSess = (sess, pre)
-            self.saver(sess)
-        sess, pre = self.predictSess
-        matList = sess.run(pre, feed_dict={
-            self.x: [imageMat],
-            self.keepProb: 1.
-        })
-        return self.list2text(matList)
-
 
 if __name__ == '__main__':
-    # {'abnormal': 0, 'error': 2919, 'right': 24768}
-    # 1、todo: 加入trainNew的路径，应该就是手工打码平台的意思，传入正确的code然后保存到这个路径即可
-    # 2、todo: 如何优先使用trainNew的数据呢，然后训练错误的数据是否有必要重复的优先训练
-    SouGouWeChat().train()
+    ChuangYu().train()
