@@ -43,7 +43,7 @@ class Captchar:
 class Manager:
 
     def __init__(self):
-        headers = {
+        self.headers = {
             'accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
             'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'zh-CN,zh;q=0.9,und;q=0.8,en;q=0.7',
@@ -62,7 +62,7 @@ class Manager:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                           '(KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'
         }
-        self.captcha = Captchar.from_headers(headers)
+        self.captcha = Captchar.from_headers(self.headers)
 
     def run(self, loop=10, delay=0):
         self.captcha.initSavePath()

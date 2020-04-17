@@ -66,7 +66,7 @@ class SouGouWeChat(CNN):
                 valid_x, valid_y = self.get_batch(size=1, test=True)
                 textListPre, textListTru = sess.run([pre, tru], feed_dict={
                     self.x: valid_x,
-                    self.y: batch_y,
+                    self.y: valid_y,
                     self.keepProb: 1.
                 })
                 print(self.list2text(textListPre), self.list2text(textListTru))
