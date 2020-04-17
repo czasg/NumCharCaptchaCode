@@ -21,6 +21,7 @@ class SouGouWeChat(CNN):
         super(SouGouWeChat, self).__init__()
         self.predictSess = None
         self.gatherManager = None
+        self.initPathParams(__file__)
 
     def model(self):
         img = tf.reshape(self.x, [-1, self.height, self.width, 1])  # 1d -> 4d
@@ -45,7 +46,7 @@ class SouGouWeChat(CNN):
         return trainStep, prediction
 
     def train(self):
-        self.initPath(__file__)
+        self.initPath()
         trainStep, prediction = self.model()
         pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
 
@@ -62,7 +63,7 @@ class SouGouWeChat(CNN):
                     self.keepProb: 0.5
                 })
 
-                valid_x, valid_y = self.get_batch(size=1)
+                valid_x, valid_y = self.get_batch(size=1, test=True)
                 textListPre, textListTru = sess.run([pre, tru], feed_dict={
                     self.x: valid_x,
                     self.y: batch_y,
@@ -71,7 +72,6 @@ class SouGouWeChat(CNN):
                 print(self.list2text(textListPre), self.list2text(textListTru))
 
                 if index % 10 == 0:
-                    # valid_x, valid_y = self.get_batch(test=True)
                     acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
                         self.x: batch_x,
                         self.y: batch_y,
@@ -116,4 +116,5 @@ class SouGouWeChat(CNN):
 
 
 if __name__ == '__main__':
+    # {'abnormal': 0, 'error': 2919, 'right': 24768}
     SouGouWeChat().train()

@@ -59,11 +59,13 @@ class Model:
             text += str(self.labelSet[index])
         return text
 
-    def initPath(self, filePath=None):
+    def initPathParams(self, filePath=None):
         self.yieldTrainBatchHandler = None
         self.yieldValidBatchHandler = None
         self.curPath = os.path.dirname(os.path.abspath(filePath or __file__))
         self.filePath = lambda path, img: os.path.join(self.curPath, path, img)
+
+    def initPath(self):
         info = ""
         for path in [self.modelPath, self.trainPath, self.validPath, self.newTrainPath]:
             path = os.path.join(self.curPath, path)

@@ -32,10 +32,3 @@ class ModelManager(metaclass=ModelMetaclass):
 
     def predict(self, img, model=None):
         return self.__model__.get(model, self.FakerModel).predict(img)
-
-
-if __name__ == '__main__':
-    with open('./sougou_wechat/img/train/3tej6m_1576646662.jpg', 'rb') as f:
-        body = f.read()
-    mm = ModelManager()
-    print(mm.predict(body, "SouGouWeChat"))
