@@ -2,11 +2,26 @@
 from copy import deepcopy
 
 from trainModel.sougou_wechat.SouGouWechat import SouGouWeChat
+from trainModel.chuangyu.ChuangYu import ChuangYu
 
 __all__ = "ModelManager",
 
 
+class FakerModel:
+
+    def __getattribute__(self, item):
+        return lambda *args, **kwargs: {
+            "status": 0,
+            "msg": "不存在对应的模型",
+            "data": None
+        }
+
+
+faker = FakerModel()
+
+
 class ModelMetaclass(type):
+
     def __new__(cls, name, bases, attrs: dict):
         if name == "ModelManager":
             attrBacks = deepcopy(attrs)
@@ -20,15 +35,15 @@ class ModelMetaclass(type):
 
 class ModelManager(metaclass=ModelMetaclass):
     model_SouGouWeChat = SouGouWeChat  # 搜狗微信
-
-    class FakerModel:
-        @staticmethod
-        def predict(*args, **kwargs):
-            return {
-                "status": 0,
-                "msg": "不存在对应的模型",
-                "data": None
-            }
+    model_ChuangYu = ChuangYu  # 知道创宇
 
     def predict(self, img, model=None):
-        return self.__model__.get(model, self.FakerModel).predict(img)
+        return self.__model__.get(model, faker).predict(img)
+
+    def saveCaptcha(self, model, img, code):
+        self.__model__.get(model, faker).saveCaptcha(img, code)
+
+    def nextCaptcha(self, model):
+        return self.__model__.get(model, faker).nextCaptcha()
+
+    __model__ = dict()

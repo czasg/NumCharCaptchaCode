@@ -5,7 +5,7 @@ import tornado.web
 
 from tornado.options import define, options
 
-from trainModel import ModelManager
+from trainModel.ModelManager import ModelManager
 
 define('port', default=8866, type=int)
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ model = ModelManager()
 
 class CaptchaHandler(tornado.web.RequestHandler):
 
-    def post(self):
+    async def post(self):
         """
         input:
         >>> {
@@ -37,7 +37,7 @@ class CaptchaHandler(tornado.web.RequestHandler):
                 "msg": "请携带`image`数据访问",
                 "data": None
             })
-        code = model.predict(img, json_data.get("model"))  # 图像识别
+        code = model.predict(img, json_data.get("model"))
         if isinstance(code, dict):
             result = code  # 识别失败，返回错误信息
         else:
@@ -49,9 +49,59 @@ class CaptchaHandler(tornado.web.RequestHandler):
         self.write(result)
 
 
+class SaveCaptchaHandler(tornado.web.RequestHandler):
+
+    async def post(self):
+        """
+        input:
+        >>> {
+        >>>     "model": "SouGouWeChat",
+        >>>     "image": "base64",
+        >>>     "code": "string",
+        >>> }
+        output:
+        >>> {
+        >>>     "status": "-1 / 0 / 1",
+        >>>     "msg": "string"
+        >>> }
+        """
+        json_data = json.loads(self.request.body)  # type: dict
+        result = await tornado.ioloop.IOLoop.current().run_in_executor(
+            None,
+            model.saveCaptcha,
+            json_data.get("model"),
+            json_data.get("image"),
+            json_data.get("code")
+        )
+        if result:
+            self.write(result)
+
+
+class NextCaptchaHandler(tornado.web.RequestHandler):
+
+    def get(self):
+        """
+        output:
+        >>> {
+        >>>     "status": "-1 / 0 / 1",
+        >>>     "msg": "string"
+        >>> }
+        """
+        ml = self.get_argument("model", None)
+        if ml:
+            return self.write(model.nextCaptcha(ml))
+        self.write({
+            "status": -1,
+            "msg": "未指定model",
+            "data": None
+        })
+
+
 def run_app():
     app = tornado.web.Application([
-        ('/captcha', CaptchaHandler)
+        ('/captcha', CaptchaHandler),
+        ('/captcha/save', SaveCaptchaHandler),
+        ('/captcha/next', NextCaptchaHandler)
     ])
     app.listen(port=options.port)
     tornado.ioloop.IOLoop.current().start()

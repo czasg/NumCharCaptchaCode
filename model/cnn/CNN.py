@@ -1,12 +1,20 @@
 # coding: utf-8
+import re
+import base64
+import numpy as np
 import tensorflow as tf
-from model.BaseModel import Model
+
+from PIL import Image
+from io import BytesIO
 from functools import reduce
+from model.BaseModel import Model
+from trainModel.utils import catchErrorAndRetunDefault
 
 
 class CNN(Model):
 
     def __init__(self):
+        self.predictSess = None
         self.w = lambda shape: tf.Variable(tf.truncated_normal(shape, stddev=0.1))
         self.b = lambda shape: tf.Variable(tf.constant(0.1, shape=shape))
         self.co2d = lambda x, w: tf.nn.conv2d(x, w, strides=[1, 1, 1, 1], padding='SAME')
@@ -38,53 +46,86 @@ class CNN(Model):
         x = self.addLayer(x, [col, output], [output])
         return x
 
-    @staticmethod
-    def demo():
-        from tensorflow.examples.tutorials.mnist import input_data
-        mnist = input_data.read_data_sets("../../MNIST_data/", one_hot=True)  # 获取数据
+    def model(self):
+        img = tf.reshape(self.x, [-1, self.height, self.width, 1])  # 1d -> 4d
 
-        cnn = CNN()
+        conv = self.addConv(img, [3, 3, 1, 32], [32])  # 卷积层 1
+        conv = self.addConv(conv, [3, 3, 32, 64], [64])  # 卷积层 2
+        conv = self.addConv(conv, [3, 3, 64, 128], [128])  # 卷积层 3
 
-        xs = tf.placeholder(tf.float32, [None, 784])  # 输入数据
-        ys = tf.placeholder(tf.float32, [None, 10])  # 验证数据
-        keep_prob = tf.placeholder("float")  # 过拟合
+        length = int(reduce(lambda x, y: x * y, conv.shape[1:]))
+        x = tf.reshape(conv, [-1, length])  # 4d -> 1d
 
-        img = tf.reshape(xs, [-1, 28, 28, 1])  # 将数据转化为4d向量，其第2、第3维对应图片的宽、高
+        prediction = self.fullConnect(
+            x, length, 1024, self.labelLen * self.labelSet.__len__(), self.keepProb
+        )  # 全连接层
 
-        conv = cnn.addConv(img, [5, 5, 1, 32], [32])  # 添加卷积层 -> 14 * 14
-        conv = cnn.addConv(conv, [5, 5, 32, 64], [64])  # 添加卷积层 -> 7 * 7
+        with tf.name_scope('cost'):
+            crossEntropy = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(logits=prediction, labels=self.y)
+            )  # 交叉熵
 
-        print(f"当前卷积层shape: {conv.shape}")
-        length = int(reduce(lambda x, y: x * y, conv.shape[1:]))  # 最后一层卷积的多维数据长度
-        x = tf.reshape(conv, [-1, length])  # 多维转化为一维
+        with tf.name_scope('train'):
+            trainStep = tf.train.AdamOptimizer(1e-4).minimize(crossEntropy)
+        return trainStep, prediction
 
-        prediction, p = cnn.fullConnect(x, length, 1024, 10, keep_prob)  # 全连接层
+    def train(self):
+        self.initPath()
+        trainStep, prediction = self.model()
+        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
 
-        cross_entropy = tf.reduce_mean(
-            -tf.reduce_sum(ys * tf.log(p))
-        )  # 交叉熵
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            saver = self.saver(sess)
 
-        trainStep = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+            for index in range(self.cycle_loop):
+                batch_x, batch_y = self.get_batch()
 
-        correct_prediction = tf.equal(tf.argmax(prediction, 1), tf.argmax(ys, 1))  # 正确预测 -> True, False
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))  # 正确预测 -> 1, 0
+                sess.run(trainStep, feed_dict={
+                    self.x: batch_x,
+                    self.y: batch_y,
+                    self.keepProb: 0.5
+                })
 
-        sess = tf.Session()
-        sess.run(tf.global_variables_initializer())
+                valid_x, valid_y = self.get_batch(size=1, test=True)
+                textListPre, textListTru = sess.run([pre, tru], feed_dict={
+                    self.x: valid_x,
+                    self.y: valid_y,
+                    self.keepProb: 1.
+                })
+                print(f"预测数据: {self.list2text(textListPre)}  实际数据: {self.list2text(textListTru)}")
 
-        for _ in range(1):
-            batch = mnist.train.next_batch(50)
-            sess.run(trainStep, feed_dict={
-                xs: batch[0],
-                ys: batch[1],
-                keep_prob: 0.5
-            })
-            print(sess.run(accuracy, feed_dict={
-                xs: mnist.test.images,
-                ys: mnist.test.labels,
-                keep_prob: 1
-            }))
+                if index % self.stepToShowAcc == 0:
+                    acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
+                        self.x: batch_x,
+                        self.y: batch_y,
+                        self.keepProb: 1.
+                    })
+                    print(f"图片准确率为 {acc_image: <.5F} - 字符准确率为 {acc_char: <.5F}")
 
+                if index % self.stepToSaver == 0:
+                    self.saver(sess, saver)
+            self.saver(sess, saver)
 
-if __name__ == '__main__':
-    CNN.demo()
+    @catchErrorAndRetunDefault
+    def predict(self, img):
+        if isinstance(img, str):  # base64
+            img = base64.b64decode(re.sub('^data:image/.+?;base64,', '', img))
+        if isinstance(img, bytes):
+            img = Image.open(BytesIO(img))
+        imgArray = np.array(img)
+        imageGray = self.img2gray(imgArray)
+        imageMat = imageGray.flatten() / 255
+
+        if not self.predictSess:
+            prediction = self.model()[1]
+            pre = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
+            sess = tf.Session()
+            self.predictSess = (sess, pre)
+            self.saver(sess)
+        sess, pre = self.predictSess
+        matList = sess.run(pre, feed_dict={
+            self.x: [imageMat],
+            self.keepProb: 1.
+        })
+        return self.list2text(matList)
