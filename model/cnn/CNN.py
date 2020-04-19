@@ -15,10 +15,10 @@ class CNN(Model):
 
     def __init__(self):
         self.predictSess = None
-        self.w = lambda shape: tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+        self.w = lambda shape: tf.Variable(tf.random.truncated_normal(shape, stddev=0.1))
         self.b = lambda shape: tf.Variable(tf.constant(0.1, shape=shape))
         self.co2d = lambda x, w: tf.nn.conv2d(x, w, strides=[1, 1, 1, 1], padding='SAME')
-        self.pooling = lambda x: tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+        self.pooling = lambda x: tf.nn.max_pool2d(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
         super(CNN, self).__init__()
 
     def addLayer(self, x, wShape, bShape, *args):
@@ -42,16 +42,20 @@ class CNN(Model):
 
     def fullConnect(self, x, row, col, output, keep_prob=0.5):
         x = self.addLayer(x, [row, col], [col], tf.nn.relu)
-        x = tf.nn.dropout(x, keep_prob)
+        x = tf.nn.dropout(x, rate=(1 - keep_prob))
         x = self.addLayer(x, [col, output], [output])
         return x
+
+    def defineConv(self, img):
+        conv = self.addConv(img, [3, 3, 1, 32], [32])  # 卷积层 1
+        conv = self.addConv(conv, [3, 3, 32, 64], [64])  # 卷积层 2
+        conv = self.addConv(conv, [3, 3, 64, 128], [128])  # 卷积层 3
+        return conv
 
     def model(self):
         img = tf.reshape(self.x, [-1, self.height, self.width, 1])  # 1d -> 4d
 
-        conv = self.addConv(img, [3, 3, 1, 32], [32])  # 卷积层 1
-        conv = self.addConv(conv, [3, 3, 32, 64], [64])  # 卷积层 2
-        conv = self.addConv(conv, [3, 3, 64, 128], [128])  # 卷积层 3
+        conv = self.defineConv(img)  # 定义卷积层
 
         length = int(reduce(lambda x, y: x * y, conv.shape[1:]))
         x = tf.reshape(conv, [-1, length])  # 4d -> 1d
@@ -66,16 +70,19 @@ class CNN(Model):
             )  # 交叉熵
 
         with tf.name_scope('train'):
-            trainStep = tf.train.AdamOptimizer(1e-4).minimize(crossEntropy)
+            trainStep = tf.compat.v1.train.AdamOptimizer(1e-4).minimize(crossEntropy)
         return trainStep, prediction
+
+    def chooseModel(self):
+        return self.model()
 
     def train(self):
         self.initPath()
-        trainStep, prediction = self.model()
+        trainStep, prediction = self.chooseModel()
         pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
 
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
+        with tf.compat.v1.Session() as sess:
+            sess.run(tf.compat.v1.global_variables_initializer())
             saver = self.saver(sess)
 
             for index in range(self.cycle_loop):

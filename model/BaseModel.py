@@ -83,8 +83,8 @@ class Model:
 
     def initTensorflow(self):
         with tf.name_scope('sgParams'):
-            self.x = tf.placeholder(tf.float32, [None, self.width * self.height])
-            self.y = tf.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
+            self.x = tf.compat.v1.placeholder(tf.float32, [None, self.width * self.height])
+            self.y = tf.compat.v1.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
             self.keepProb = tf.placeholder(tf.float32)
 
     @staticmethod
@@ -187,7 +187,6 @@ class Model:
         return batch_x, batch_y
 
     def saver(self, sess, saver=None):
-        print(self.ModelPath.path)
         if saver:
             print("保存模型...")
             return saver.save(sess, self.ModelPath.path)
