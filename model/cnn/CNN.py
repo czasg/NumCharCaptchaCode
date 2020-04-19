@@ -47,6 +47,17 @@ class CNN(Model):
         return x
 
     def defineConv(self, img):
+        """
+        简单验证码卷积层参考 1 -> 6 -> 16
+        >>> conv = self.addConv(img, [3, 3, 1, 6], [6])
+        >>> conv = self.addConv(conv, [3, 3, 6, 16], [16])
+        复杂验证码卷积层参考 1 -> 32 -> 64 -> 128
+        >>> conv = self.addConv(img, [3, 3, 1, 32], [32])
+        >>> conv = self.addConv(conv, [3, 3, 32, 64], [64])
+        >>> conv = self.addConv(conv, [3, 3, 64, 128], [128])
+        :param img:
+        :return:
+        """
         conv = self.addConv(img, [3, 3, 1, 32], [32])  # 卷积层 1
         conv = self.addConv(conv, [3, 3, 32, 64], [64])  # 卷积层 2
         conv = self.addConv(conv, [3, 3, 64, 128], [128])  # 卷积层 3
