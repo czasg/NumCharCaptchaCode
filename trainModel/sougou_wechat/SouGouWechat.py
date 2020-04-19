@@ -20,7 +20,7 @@ class SouGouWeChat(CNN):
     def nextCaptcha(self) -> dict:
         if not self.gatherManager:
             self.gatherManager = Manager()
-        body = self.gatherManager.nextCaptcha()
+        body = self.gatherManager.nextCaptcha()  # type: bytes
         code = self.predict(body)
         return {
             "status": 1,

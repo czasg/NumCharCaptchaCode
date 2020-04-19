@@ -131,6 +131,7 @@ class CNN(Model):
             img = base64.b64decode(re.sub('^data:image/.+?;base64,', '', img))
         if isinstance(img, bytes):
             img = Image.open(BytesIO(img))
+            img = img.resize((self.width, self.height))
         imgArray = np.array(img)
         imageGray = self.img2gray(imgArray)
         imageMat = imageGray.flatten() / 255
@@ -138,7 +139,7 @@ class CNN(Model):
         if not self.predictSess:
             prediction = self.model()[1]
             pre = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
-            sess = tf.Session()
+            sess = tf.compat.v1.Session()
             self.predictSess = (sess, pre)
             self.saver(sess)
         sess, pre = self.predictSess
