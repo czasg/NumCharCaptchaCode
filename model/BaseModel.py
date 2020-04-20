@@ -136,7 +136,7 @@ class Model:
             os.makedirs(pathClass.path, exist_ok=True)
             pathClass.count = len(os.listdir(pathClass.path))
             info += f"{pathClass.name}: {pathClass.count} \n"
-            if pathClass.__name__ == "TrainPath" and pathClass.count == 0:
+            if pathClass.__class__.__name__ == "TrainPath" and pathClass.count == 0:
                 sys.exit(f"{info} \nERROR:{pathClass.name} 数据为空")
         print(info)
 

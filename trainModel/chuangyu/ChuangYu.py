@@ -18,11 +18,6 @@ class ChuangYu(CNN):
     def getBatchX(self, imageArray):
         return imageArray.flatten() + 0
 
-    def defineConv(self, img):
-        conv = self.addConv(img, [3, 3, 1, 6], [6])
-        conv = self.addConv(conv, [3, 3, 6, 16], [16])
-        return conv
-
     @catchErrorAndRetunDefault
     def nextCaptcha(self) -> dict:
         if not self.gatherManager:
