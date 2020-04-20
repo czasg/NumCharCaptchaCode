@@ -134,7 +134,6 @@ class CNN(Model):
             img = img.resize((self.width, self.height))
         imgArray = np.array(img)
         imageGray = self.img2gray(imgArray)
-        imageMat = imageGray.flatten() / 255
 
         if not self.predictSess:
             prediction = self.model()[1]
@@ -144,7 +143,7 @@ class CNN(Model):
             self.saver(sess)
         sess, pre = self.predictSess
         matList = sess.run(pre, feed_dict={
-            self.x: [imageMat],
+            self.x: [self.getBatchX(imageGray)],
             self.keepProb: 1.
         })
         return self.list2text(matList)
