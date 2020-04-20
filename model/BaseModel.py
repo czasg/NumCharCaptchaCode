@@ -165,6 +165,12 @@ class Model:
             self.TrainPath.setPool(newTrain)
             print("转移成功...")
 
+    def getBatchX(self, imageArray):
+        return imageArray.flatten() / 255
+
+    def getBatchY(self, label):
+        return self.label2vec(label, self.labelLen, self.labelSet)
+
     def get_batch(self, test=False, size=100):
         self.checkNewTrainPath()
         batch_x = np.zeros([size, self.height * self.width])
@@ -182,8 +188,8 @@ class Model:
                 continue
 
             imageArray = self.img2gray(imageArray)
-            batch_x[index, :] = imageArray.flatten() / 255
-            batch_y[index, :] = self.label2vec(label, self.labelLen, self.labelSet)
+            batch_x[index, :] = self.getBatchX(imageArray)
+            batch_y[index, :] = self.getBatchY(label)
         return batch_x, batch_y
 
     def saver(self, sess, saver=None):
