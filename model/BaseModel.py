@@ -123,6 +123,10 @@ class Model:
         self.yieldTrainBatchHandler = None
         self.yieldValidBatchHandler = None
         self.curPath = os.path.dirname(os.path.abspath(filePath or __file__))
+        self.ModelPath = self.ModelPath()
+        self.ValidPath = self.ValidPath()
+        self.NewTrainPath = self.NewTrainPath()
+        self.TrainPath = self.TrainPath()
         for pathClass in (self.ModelPath, self.ValidPath, self.NewTrainPath, self.TrainPath):
             pathClass.path = os.path.join(self.curPath, pathClass.path)
 
@@ -193,6 +197,7 @@ class Model:
         return batch_x, batch_y
 
     def saver(self, sess, saver=None):
+        print(self.ModelPath.path)
         if saver:
             print("保存模型...")
             return saver.save(sess, self.ModelPath.path)
