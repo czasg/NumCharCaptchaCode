@@ -85,7 +85,7 @@ class Model:
         with tf.name_scope('sgParams'):
             self.x = tf.compat.v1.placeholder(tf.float32, [None, self.width * self.height])
             self.y = tf.compat.v1.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
-            self.keepProb = tf.placeholder(tf.float32)
+            self.keepProb = tf.compat.v1.placeholder(tf.float32)
 
     @staticmethod
     def wxb(w, x, b, activeFunc=lambda x: x):
