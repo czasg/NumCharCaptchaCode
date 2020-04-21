@@ -40,9 +40,9 @@ class CNN(Model):
             tf.nn.relu(y)
         )
 
-    def fullConnect(self, x, row, col, output, keep_prob=0.5):
+    def fullConnect(self, x, row, col, output):
         x = self.addLayer(x, [row, col], [col], tf.nn.relu)
-        x = tf.nn.dropout(x, rate=(1 - keep_prob))
+        x = tf.nn.dropout(x, rate=(1 - self.keepProb))
         x = self.addLayer(x, [col, output], [output])
         return x
 
@@ -59,8 +59,11 @@ class CNN(Model):
         :return:
         """
         conv = self.addConv(img, [3, 3, 1, 32], [32])  # 卷积层 1
+        conv = tf.nn.dropout(conv, rate=(1 - self.keepProb))
         conv = self.addConv(conv, [3, 3, 32, 64], [64])  # 卷积层 2
+        conv = tf.nn.dropout(conv, rate=(1 - self.keepProb))
         conv = self.addConv(conv, [3, 3, 64, 128], [128])  # 卷积层 3
+        conv = tf.nn.dropout(conv, rate=(1 - self.keepProb))
         return conv
 
     def model(self):
@@ -72,7 +75,7 @@ class CNN(Model):
         x = tf.reshape(conv, [-1, length])  # 4d -> 1d
 
         prediction = self.fullConnect(
-            x, length, 1024, self.labelLen * self.labelSet.__len__(), self.keepProb
+            x, length, 1024, self.labelLen * self.labelSet.__len__()
         )  # 全连接层
 
         with tf.name_scope('cost'):
@@ -102,7 +105,7 @@ class CNN(Model):
                 sess.run(trainStep, feed_dict={
                     self.x: batch_x,
                     self.y: batch_y,
-                    self.keepProb: 0.5
+                    self.keepProb: 0.75
                 })
 
                 valid_x, valid_y = self.get_batch(size=1, test=True)
