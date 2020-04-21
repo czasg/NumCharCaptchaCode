@@ -197,9 +197,8 @@ class Model:
         return batch_x, batch_y
 
     def saver(self, sess, saver=None):
-        print(self.ModelPath.path)
         if saver:
-            print("保存模型...")
+            print("############## 保存模型 ##############")
             return saver.save(sess, self.ModelPath.path)
         saver = tf.train.Saver()
         try:
