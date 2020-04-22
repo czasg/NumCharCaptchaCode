@@ -205,6 +205,20 @@ class Model:
             batch_y[index, :] = self.getBatchY(label)
         return batch_x, batch_y
 
+    def keep_batch(self, batch_x: np.array, batch_y: np.array, preRight: np.array):
+        """
+        取出所有验证对了的下标，对错误的随机抛除2/3
+        :param batch_x:
+        :param batch_y:
+        :param preRight:
+        :return:
+        """
+        rightNum = np.nonzero(preRight).__len__()
+        allNum = batch_x.__len__()
+
+        for right in preRight:
+            pass
+
     def saver(self, sess, saver=None):
         if saver:
             print("############## 保存模型 ##############")
@@ -225,4 +239,5 @@ class Model:
         correctPrediction = tf.equal(pre, tru)
         charAccuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32))
         imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))
-        return pre, tru, charAccuracy, imgAccuracy
+        listAccuracy = tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1)
+        return pre, tru, charAccuracy, imgAccuracy, listAccuracy

@@ -90,10 +90,10 @@ class CNN(Model):
     def chooseModel(self):
         return self.model()
 
-    def train(self):
+    def fastTrain(self):
         self.initPath()
         trainStep, prediction = self.chooseModel()
-        pre, tru, charAccuracy, imgAccuracy = self.valid(prediction)
+        pre, tru, charAccuracy, imgAccuracy, _ = self.valid(prediction)
 
         with tf.compat.v1.Session() as sess:
             sess.run(tf.compat.v1.global_variables_initializer())
@@ -109,7 +109,7 @@ class CNN(Model):
                 })
 
                 valid_x, valid_y = self.get_batch(size=1, test=True)
-                textListPre, textListTru = sess.run([pre, tru], feed_dict={
+                textListPre, textListTru, czaTest = sess.run([pre, tru], feed_dict={
                     self.x: valid_x,
                     self.y: valid_y,
                     self.keepProb: 1.
@@ -127,6 +127,46 @@ class CNN(Model):
                 if index % self.stepToSaver == 0:
                     self.saver(sess, saver)
             self.saver(sess, saver)
+
+    def keepTrain(self):
+        self.initPath()
+        trainStep, prediction = self.chooseModel()
+        pre, tru, charAccuracy, imgAccuracy, listAccuracy = self.valid(prediction)
+
+        with tf.compat.v1.Session() as sess:
+            sess.run(tf.compat.v1.global_variables_initializer())
+            saver = self.saver(sess)
+
+            for index in range(self.cycle_loop):
+                batch_x, batch_y = self.get_batch()
+
+                _, listAcc = sess.run([trainStep, listAccuracy], feed_dict={
+                    self.x: batch_x,
+                    self.y: batch_y,
+                    self.keepProb: 0.75
+                })
+
+                print(listAcc.__len__(), np.nonzero(listAcc)[0].__len__())
+
+            #     valid_x, valid_y = self.get_batch(size=1, test=True)
+            #     textListPre, textListTru, czaTest = sess.run([pre, tru], feed_dict={
+            #         self.x: valid_x,
+            #         self.y: valid_y,
+            #         self.keepProb: 1.
+            #     })
+            #     print(f"测试集 >>> 预测数据: {self.list2text(textListPre)}  实际数据: {self.list2text(textListTru)}")
+            #
+            #     if index % self.stepToShowAcc == 0:
+            #         acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
+            #             self.x: batch_x,
+            #             self.y: batch_y,
+            #             self.keepProb: 1.
+            #         })
+            #         print(f"训练集 >>> 图片准确率: {acc_image: <.5F} - 字符准确率: {acc_char: <.5F}")
+            #
+            #     if index % self.stepToSaver == 0:
+            #         self.saver(sess, saver)
+            # self.saver(sess, saver)
 
     @catchErrorAndRetunDefault
     def predict(self, img):

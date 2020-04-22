@@ -3,7 +3,7 @@ from model.cnn.CNN import CNN
 
 
 class ChuangYu(CNN):
-    width = 139  # 图片宽度
+    width = 200  # 图片宽度
     height = 60  # 图片高度
     labelLen = 6
 
@@ -18,4 +18,5 @@ class ChuangYu(CNN):
 
 
 if __name__ == '__main__':
-    ChuangYu().train()
+    # ChuangYu().fastTrain()
+    ChuangYu().keepTrain()
