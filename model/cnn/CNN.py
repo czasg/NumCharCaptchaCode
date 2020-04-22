@@ -1,5 +1,4 @@
 # coding: utf-8
-import re
 import base64
 import numpy as np
 import tensorflow as tf
