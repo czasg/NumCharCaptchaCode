@@ -72,15 +72,15 @@ class Model:
 
     class ModelPathClass(Path):
         name = "模型文件夹"
-        path = "model/"
+        path = "model/"  # 需要以斜杠结尾
 
     class TrainPathClass(Path):
         name = "训练文件夹"
-        path = "img/train/"
+        path = "img/train"
 
     class ValidPathClass(Path):
         name = "验证文件夹"
-        path = "img/valid/"
+        path = "img/valid"
 
     class NewTrainPathClass(Path):
         name = "最新待训练"
@@ -142,8 +142,8 @@ class Model:
             os.makedirs(pathClass.path, exist_ok=True)
             pathClass.count = len(os.listdir(pathClass.path))
             info += f"{pathClass.name}: {pathClass.count} \n"
-            if pathClass.__class__.__name__ == "TrainPath" and pathClass.count == 0:
-                sys.exit(f"{info} \nERROR:{pathClass.name} 数据为空")
+        if self.TrainPath.count == 0 and self.NewTrainPath.count == 0:
+            sys.exit(f"{info} \nERROR:{pathClass.name} 数据为空")
         if self.ValidPath.count == 0:
             print("检测到测试集为空...以训练集数据作为测试集")
             self.ValidPath.path = self.TrainPath.path
@@ -257,3 +257,41 @@ class Model:
         imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))
         listAccuracy = tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1)
         return pre, tru, charAccuracy, imgAccuracy, listAccuracy
+
+    def predict(self, img):
+        raise NotImplementedError
+
+    def checkTrained(self, sess, pre):
+        print("正在检测已训练数据中是否有需要重新训练的...")
+        self.predictSess = (sess, pre)
+        allCount = errorCount = index = 0
+        while True:
+            trainedPath = f"{self.TrainPath.path}_{index}"
+            if os.path.exists(trainedPath):
+                for img in os.listdir(trainedPath):
+                    imgPath = os.path.join(trainedPath, img)
+                    with open(imgPath, "rb") as f:
+                        body = f.read()
+                    if img.split("_")[0] != self.predict(body):
+                        shutil.move(
+                            imgPath,
+                            self.NewTrainPath.toPath(img)
+                        )
+                        errorCount += 1
+                    allCount += 1
+            else:
+                break
+            index += 1
+        print(f">>> 检测到已训练数据:{allCount} \n>>> 其中需要重新训练:{errorCount}")
+
+    def saveTrained(self):
+        index = 0
+        while True:
+            trainedPath = f"{self.TrainPath.path}_{index}"
+            if os.path.exists(trainedPath):
+                index += 1
+                continue
+            os.rename(self.TrainPath.path, trainedPath)
+            os.makedirs(self.TrainPath.path)
+            print(f">>> 此次训练数据已转到: {trainedPath}")
+            break

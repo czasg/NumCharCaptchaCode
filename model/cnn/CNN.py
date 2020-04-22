@@ -141,6 +141,8 @@ class CNN(Model):
                 if index % self.stepToSaver == 0:
                     self.saver(sess, saver)
             self.saver(sess, saver)
+            self.checkTrained(sess, pre)
+            self.saveTrained()
 
     @catchErrorAndRetunDefault
     def predict(self, img):
