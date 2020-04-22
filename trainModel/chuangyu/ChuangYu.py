@@ -35,4 +35,5 @@ class ChuangYu(CNN):
 
 
 if __name__ == '__main__':
-    ChuangYu().train()
+    # ChuangYu().fastTrain()
+    ChuangYu().keepTrain()

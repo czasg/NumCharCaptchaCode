@@ -33,4 +33,5 @@ class SouGouWeChat(CNN):
 
 
 if __name__ == '__main__':
-    SouGouWeChat().train()
+    # SouGouWeChat().fastTrain()
+    SouGouWeChat().keepTrain()

@@ -206,18 +206,34 @@ class Model:
         return batch_x, batch_y
 
     def keep_batch(self, batch_x: np.array, batch_y: np.array, preRight: np.array):
-        """
-        取出所有验证对了的下标，对错误的随机抛除2/3
-        :param batch_x:
-        :param batch_y:
-        :param preRight:
-        :return:
-        """
-        rightNum = np.nonzero(preRight).__len__()
-        allNum = batch_x.__len__()
+        keepRate = np.nonzero(preRight)[0].__len__() / preRight.__len__()
+        for index, value in enumerate(preRight):
+            if value is 1.0:
+                pass
+            elif random.random() < keepRate:
+                continue
+            label, imageArray = self.TrainPath.nextCaptcha()
+            imageArray = self.img2gray(imageArray)
+            batch_x[index, :] = self.getBatchX(imageArray)
+            batch_y[index, :] = self.getBatchY(label)
+        return batch_x, batch_y
 
-        for right in preRight:
-            pass
+    def testStepShow(self, sess, pre, tru):
+        valid_x, valid_y = self.get_batch(size=1, test=True)
+        textListPre, textListTru = sess.run([pre, tru], feed_dict={
+            self.x: valid_x,
+            self.y: valid_y,
+            self.keepProb: 1.
+        })
+        print(f"测试集 >>> 预测数据: {self.list2text(textListPre)}  实际数据: {self.list2text(textListTru)}")
+
+    def trainStepShow(self, sess, batch_x, batch_y, imgAccuracy, charAccuracy):
+        acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
+            self.x: batch_x,
+            self.y: batch_y,
+            self.keepProb: 1.
+        })
+        print(f"训练集 >>> 图片准确率: {acc_image: <.5F} - 字符准确率: {acc_char: <.5F}")
 
     def saver(self, sess, saver=None):
         if saver:
