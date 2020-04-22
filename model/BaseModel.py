@@ -70,19 +70,19 @@ class Model:
     stepToShowAcc = 10  # 打印准确率step
     cycle_loop = 20000  # 训练次数
 
-    class ModelPath:
+    class ModelPathClass(Path):
         name = "模型文件夹"
         path = "model/"
 
-    class TrainPath(Path):
+    class TrainPathClass(Path):
         name = "训练文件夹"
         path = "img/train/"
 
-    class ValidPath(Path):
+    class ValidPathClass(Path):
         name = "验证文件夹"
         path = "img/valid/"
 
-    class NewTrainPath(Path):
+    class NewTrainPathClass(Path):
         name = "最新待训练"
         path = "img/trainNew/"
 
@@ -131,10 +131,10 @@ class Model:
         self.yieldTrainBatchHandler = None
         self.yieldValidBatchHandler = None
         self.curPath = os.path.dirname(os.path.abspath(filePath or __file__))
-        self.ModelPath = self.ModelPath(self.curPath)
-        self.ValidPath = self.ValidPath(self.curPath)
-        self.NewTrainPath = self.NewTrainPath(self.curPath)
-        self.TrainPath = self.TrainPath(self.curPath)
+        self.ModelPath = self.ModelPathClass(self.curPath)
+        self.ValidPath = self.ValidPathClass(self.curPath)
+        self.NewTrainPath = self.NewTrainPathClass(self.curPath)
+        self.TrainPath = self.TrainPathClass(self.curPath)
 
     def initPath(self):
         info = ""
@@ -212,9 +212,9 @@ class Model:
         saver = tf.train.Saver()
         try:
             saver.restore(sess, self.ModelPath.path)
-            print("训练已有模型...")
+            print(f"训练已有模型...{self.ModelPath.path}")
         except:
-            print("未获取到模型...")
+            print(f"未获取到模型...{self.ModelPath.path}")
         return saver
 
     def valid(self, prediction):
