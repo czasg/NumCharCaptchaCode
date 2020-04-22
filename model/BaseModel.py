@@ -149,23 +149,6 @@ class Model:
             self.ValidPath.path = self.TrainPath.path
         print(info)
 
-    @catchErrorAndRetunDefault
-    def saveCaptcha(self, img, code):
-        if isinstance(img, str):
-            img = base64.b64decode(re.sub('^data:image/.+?;base64,', '', img))
-        if isinstance(img, bytes):
-            filename = f"{code}_{int(time.time())}.jpg"
-            self.NewTrainPath.saveCaptcha(img, filename)
-            return {
-                "status": 0,
-                "msg": f"保存成功: {filename}"
-            }
-        else:
-            return {
-                "status": 0,
-                "msg": f"保存失败, 未知格式: {type(img)}"
-            }
-
     def checkNewTrainPath(self):
         newTrain = os.listdir(self.NewTrainPath.path)
         if newTrain:
@@ -258,9 +241,6 @@ class Model:
         listAccuracy = tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1)
         return pre, tru, charAccuracy, imgAccuracy, listAccuracy
 
-    def predict(self, img):
-        raise NotImplementedError
-
     def checkTrained(self, sess, pre):
         print("正在检测已训练数据中是否有需要重新训练的...")
         self.predictSess = (sess, pre)
@@ -295,3 +275,33 @@ class Model:
             os.makedirs(self.TrainPath.path)
             print(f">>> 此次训练数据已转到: {trainedPath}")
             break
+
+    def predict(self, img) -> str:
+        raise NotImplementedError
+
+    @catchErrorAndRetunDefault
+    def saveCaptcha(self, img, code) -> dict:
+        if isinstance(img, str):
+            img = base64.b64decode(re.sub('^data:image/.+?;base64,', '', img))
+        if isinstance(img, bytes):
+            filename = f"{code}_{int(time.time())}.jpg"
+            self.NewTrainPath.saveCaptcha(img, filename)
+            return {
+                "status": 0,
+                "msg": f"保存成功: {filename}"
+            }
+        else:
+            return {
+                "status": 0,
+                "msg": f"保存失败, 未知格式: {type(img)}"
+            }
+
+    def nextCaptcha(self, code=None, base64str=None) -> dict:
+        return {
+            "status": 1,
+            "msg": "获取成功",
+            "data": {
+                "code": code,
+                "image": f"data:image/png;base64,{base64str}"
+            }
+        }

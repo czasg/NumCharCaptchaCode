@@ -22,14 +22,10 @@ class SouGouWeChat(CNN):
             self.gatherManager = Manager()
         body = self.gatherManager.nextCaptcha()  # type: bytes
         code = self.predict(body)
-        return {
-            "status": 1,
-            "msg": "获取成功",
-            "data": {
-                "code": code,
-                "image": f"data:image/png;base64,{base64.b64encode(body).decode()}"
-            }
-        }
+        return super(SouGouWeChat, self).nextCaptcha(
+            code,
+            base64.b64encode(body).decode()
+        )
 
 
 if __name__ == '__main__':
