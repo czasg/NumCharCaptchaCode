@@ -8,7 +8,7 @@ from PIL import Image
 from io import BytesIO
 from functools import reduce
 from model.BaseModel import Model
-from trainModel.utils import catchErrorAndRetunDefault
+from trainModel.utils import catchErrorAndRetunDefault, BASE64_REGEX
 
 
 class CNN(Model):
@@ -26,19 +26,23 @@ class CNN(Model):
         b = self.b(bShape)
         return self.wxb(w, x, b, *args)
 
-    def addConv(self, x, wShape, bShape):
+    def addConv(self, x, wShape, bShape, dropout=True):
         """添加`卷积层`
         x:
         wShape:
         bShape:
+        dropout:
         """
         w = self.w(wShape)
         b = self.b(bShape)
         wx = self.co2d(x, w)
         y = wx + b
-        return self.pooling(
+        conv = self.pooling(
             tf.nn.relu(y)
         )
+        return tf.nn.dropout(conv, rate=(1 - self.keepProb)) \
+            if dropout else \
+            conv
 
     def fullConnect(self, x, row, col, output):
         x = self.addLayer(x, [row, col], [col], tf.nn.relu)
@@ -59,11 +63,8 @@ class CNN(Model):
         :return:
         """
         conv = self.addConv(img, [3, 3, 1, 32], [32])  # 卷积层 1
-        conv = tf.nn.dropout(conv, rate=(1 - self.keepProb))
         conv = self.addConv(conv, [3, 3, 32, 64], [64])  # 卷积层 2
-        conv = tf.nn.dropout(conv, rate=(1 - self.keepProb))
         conv = self.addConv(conv, [3, 3, 64, 128], [128])  # 卷积层 3
-        conv = tf.nn.dropout(conv, rate=(1 - self.keepProb))
         return conv
 
     def model(self):
@@ -114,7 +115,7 @@ class CNN(Model):
                     self.y: valid_y,
                     self.keepProb: 1.
                 })
-                print(f"预测数据: {self.list2text(textListPre)}  实际数据: {self.list2text(textListTru)}")
+                print(f"测试集 >>> 预测数据: {self.list2text(textListPre)}  实际数据: {self.list2text(textListTru)}")
 
                 if index % self.stepToShowAcc == 0:
                     acc_image, acc_char = sess.run([imgAccuracy, charAccuracy], feed_dict={
@@ -122,7 +123,7 @@ class CNN(Model):
                         self.y: batch_y,
                         self.keepProb: 1.
                     })
-                    print(f"图片准确率为 {acc_image: <.5F} - 字符准确率为 {acc_char: <.5F}")
+                    print(f"训练集 >>> 图片准确率: {acc_image: <.5F} - 字符准确率: {acc_char: <.5F}")
 
                 if index % self.stepToSaver == 0:
                     self.saver(sess, saver)
@@ -131,7 +132,7 @@ class CNN(Model):
     @catchErrorAndRetunDefault
     def predict(self, img):
         if isinstance(img, str):  # base64
-            img = base64.b64decode(re.sub('^data:image/.+?;base64,', '', img))
+            img = base64.b64decode(BASE64_REGEX("", img))
         if isinstance(img, bytes):
             img = Image.open(BytesIO(img))
             img = img.resize((self.width, self.height))

@@ -1,3 +1,8 @@
+import re
+
+BASE64_REGEX = re.compile("^data:image/.+?;base64,").sub
+
+
 def catchErrorAndRetunDefault(func):
     def wrapper(*args, **kwargs):
         try:

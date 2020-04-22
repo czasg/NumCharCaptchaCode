@@ -16,36 +16,44 @@ from trainModel.utils import catchErrorAndRetunDefault
 class Path:
     name = None
     path = None
+    curPath = None
     count = 0
     pool = []
     yieldHandler = None
 
-    @classmethod
-    def to_path(cls, img):
-        return os.path.join(cls.path, img)
+    def __init__(self, curPath):
+        self.curPath = curPath
+        self.path = os.path.join(self.curPath, self.path)
 
-    @classmethod
-    def saveCaptcha(cls, body: bytes, img: str) -> None:
-        with open(cls.to_path(img), 'wb') as f:
+    def setPath(self, path):
+        self.path = os.path.join(self.curPath, path)
+        return self.path
+
+    def toPath(self, img):
+        return os.path.join(self.path, img)
+
+    def saveCaptcha(self, body: bytes, img: str) -> None:
+        with open(self.toPath(img), 'wb') as f:
             f.write(body)
 
-    @classmethod
-    def setPool(cls, pool):
+    def setPool(self, pool):
         if isinstance(pool, str):
-            cls.pool = os.listdir(pool)
+            self.pool = os.listdir(pool)
         elif isinstance(pool, list):
-            cls.pool += pool
-        random.shuffle(cls.pool)
+            self.pool += pool
+        random.shuffle(self.pool)
 
-    @classmethod
-    def yieldBatch(cls, pathDir):
-        cls.setPool(pathDir)
+    def yieldBatch(self, pathDir):
+        self.setPool(pathDir)
         while True:
-            for img in cls.pool:
-                image = Image.open(cls.to_path(img))
-                yield img.split("_")[0], np.array(image)
+            if self.pool:
+                for img in self.pool:
+                    image = Image.open(self.toPath(img))
+                    yield img.split("_")[0], np.array(image)
+            else:
+                sys.exit(f"{self.name} 数据为空 \n"
+                         f"路径: {self.path}")
 
-    @classmethod
     def nextCaptcha(self):
         if not self.yieldHandler:
             self.yieldHandler = self.yieldBatch(self.path)
@@ -82,7 +90,7 @@ class Model:
         self.initTensorflow()
 
     def initTensorflow(self):
-        with tf.name_scope('sgParams'):
+        with tf.name_scope('NumCharCC'):
             self.x = tf.compat.v1.placeholder(tf.float32, [None, self.width * self.height])
             self.y = tf.compat.v1.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
             self.keepProb = tf.compat.v1.placeholder(tf.float32)
@@ -123,12 +131,10 @@ class Model:
         self.yieldTrainBatchHandler = None
         self.yieldValidBatchHandler = None
         self.curPath = os.path.dirname(os.path.abspath(filePath or __file__))
-        self.ModelPath = self.ModelPath()
-        self.ValidPath = self.ValidPath()
-        self.NewTrainPath = self.NewTrainPath()
-        self.TrainPath = self.TrainPath()
-        for pathClass in (self.ModelPath, self.ValidPath, self.NewTrainPath, self.TrainPath):
-            pathClass.path = os.path.join(self.curPath, pathClass.path)
+        self.ModelPath = self.ModelPath(self.curPath)
+        self.ValidPath = self.ValidPath(self.curPath)
+        self.NewTrainPath = self.NewTrainPath(self.curPath)
+        self.TrainPath = self.TrainPath(self.curPath)
 
     def initPath(self):
         info = ""
@@ -138,6 +144,9 @@ class Model:
             info += f"{pathClass.name}: {pathClass.count} \n"
             if pathClass.__class__.__name__ == "TrainPath" and pathClass.count == 0:
                 sys.exit(f"{info} \nERROR:{pathClass.name} 数据为空")
+        if self.ValidPath.count == 0:
+            print("检测到测试集为空...以训练集数据作为测试集")
+            self.ValidPath.path = self.TrainPath.path
         print(info)
 
     @catchErrorAndRetunDefault
@@ -163,8 +172,8 @@ class Model:
             print(f"检测到新的训练数据: {len(newTrain)} 开始转移数据...")
             for img in newTrain:
                 shutil.move(
-                    self.NewTrainPath.to_path(img),
-                    self.TrainPath.to_path(img)
+                    self.NewTrainPath.toPath(img),
+                    self.TrainPath.toPath(img)
                 )
             self.TrainPath.setPool(newTrain)
             print("转移成功...")
