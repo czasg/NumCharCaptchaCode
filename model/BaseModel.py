@@ -260,7 +260,7 @@ class Model:
             if os.path.exists(trainedPath):
                 allTrained = os.listdir(trainedPath)
                 allTrainedLenght = allTrained.__len__()
-                print(f">>> 检测到已训练数据: {allTrainedLenght} >>> 路径: {trainedPath} \n")
+                print(f">>> 检测到已训练数据: {allTrainedLenght} >>> 路径: {trainedPath}")
                 count = 0
                 for img in allTrained:
                     imgPath = os.path.join(trainedPath, img)
@@ -273,8 +273,9 @@ class Model:
                         )
                         errorCount += 1
                     allCount += 1
+                    count += 1
                     show_dynamic_ratio(count, allTrainedLenght)
-                print("\r\n\r\n")
+                if count: print("")
             else:
                 break
             index += 1
