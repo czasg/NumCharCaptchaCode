@@ -2,13 +2,13 @@
 from model.cnn.CNN import CNN
 
 
-class ChuangYu(CNN):
+class Demo(CNN):
     width = 200  # 图片宽度
     height = 60  # 图片高度
     labelLen = 6
 
     def __init__(self):
-        super(ChuangYu, self).__init__()
+        super(Demo, self).__init__()
         self.initPathParams(__file__)
 
     def defineConv(self, img):
@@ -18,5 +18,5 @@ class ChuangYu(CNN):
 
 
 if __name__ == '__main__':
-    # ChuangYu().fastTrain()
-    ChuangYu().keepTrain()
+    # Demo().fastTrain()
+    Demo().keepTrain()
