@@ -100,8 +100,8 @@ class NextCaptchaHandler(tornado.web.RequestHandler):
 def run_app():
     app = tornado.web.Application([
         ('/captcha', CaptchaHandler),
-        ('/captcha/save', SaveCaptchaHandler),
-        ('/captcha/next', NextCaptchaHandler)
+        # ('/captcha/save', SaveCaptchaHandler),  # todo, 是否需要在线标注功能呢?
+        # ('/captcha/next', NextCaptchaHandler)
     ])
     app.listen(port=options.port)
     tornado.ioloop.IOLoop.current().start()

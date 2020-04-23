@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from trainModel.sougou_wechat.SouGouWechat import SouGouWeChat
 from trainModel.chuangyu.ChuangYu import ChuangYu
+from trainModel.jingdong.JingDong import JingDong
 
 __all__ = "ModelManager",
 
@@ -36,6 +37,7 @@ class ModelMetaclass(type):
 class ModelManager(metaclass=ModelMetaclass):
     model_SouGouWeChat = SouGouWeChat  # 搜狗微信
     model_ChuangYu = ChuangYu  # 知道创宇
+    model_JingDong = JingDong  # 京东商城
 
     def predict(self, img, model=None):
         return self.__model__.get(model, faker).predict(img)
