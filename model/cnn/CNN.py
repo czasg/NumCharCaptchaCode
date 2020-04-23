@@ -132,7 +132,6 @@ class CNN(Model):
                     self.keepProb: 0.75
                 })
 
-                self.testStepShow(sess, pre, tru)
                 if index % self.stepToShowAcc == 0:
                     self.trainStepShow(sess, batch_x, batch_y, imgAccuracy, charAccuracy)
 
@@ -141,8 +140,8 @@ class CNN(Model):
                 if index % self.stepToSaver == 0:
                     self.saver(sess, saver)
             self.saver(sess, saver)
-            self.checkTrained(sess, pre)
             self.saveTrained()
+            self.checkTrained(sess, pre)
 
     @catchErrorAndRetunDefault
     def predict(self, img):

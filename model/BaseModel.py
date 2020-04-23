@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from PIL import Image
-from trainModel.utils import catchErrorAndRetunDefault
+from trainModel.utils import catchErrorAndRetunDefault, show_dynamic_ratio
 
 
 class Path:
@@ -189,16 +189,26 @@ class Model:
         return batch_x, batch_y
 
     def keep_batch(self, batch_x: np.array, batch_y: np.array, preRight: np.array):
+        count = 0
         keepRate = np.nonzero(preRight)[0].__len__() / preRight.__len__()
         for index, value in enumerate(preRight):
-            if value is 1.0:
+            if value == 1.0:
                 pass
             elif random.random() < keepRate:
+                count += 1
                 continue
             label, imageArray = self.TrainPath.nextCaptcha()
+
+            offset = self.labelLen - len(label)
+            if offset > 0:
+                label += ' ' * offset
+            elif offset < 0:
+                continue
+
             imageArray = self.img2gray(imageArray)
             batch_x[index, :] = self.getBatchX(imageArray)
             batch_y[index, :] = self.getBatchY(label)
+        print(f"保留率为: {count}%")
         return batch_x, batch_y
 
     def testStepShow(self, sess, pre, tru):
@@ -233,12 +243,12 @@ class Model:
     def valid(self, prediction):
         predict = tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()])
         truth = tf.reshape(self.y, [-1, self.labelLen, self.labelSet.__len__()])
-        pre = tf.argmax(predict, 2)
-        tru = tf.argmax(truth, 2)
+        pre = tf.argmax(predict, 2)  # 预测值
+        tru = tf.argmax(truth, 2)  # 实际值
         correctPrediction = tf.equal(pre, tru)
-        charAccuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32))
-        imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))
-        listAccuracy = tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1)
+        charAccuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32))  # 单个字符匹配准确率
+        imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))  # 全匹配准确率
+        listAccuracy = tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1)  # 匹配值列表
         return pre, tru, charAccuracy, imgAccuracy, listAccuracy
 
     def checkTrained(self, sess, pre):
@@ -248,7 +258,11 @@ class Model:
         while True:
             trainedPath = f"{self.TrainPath.path}_{index}"
             if os.path.exists(trainedPath):
-                for img in os.listdir(trainedPath):
+                allTrained = os.listdir(trainedPath)
+                allTrainedLenght = allTrained.__len__()
+                print(f">>> 检测到已训练数据: {allTrainedLenght} >>> 路径: {trainedPath} \n")
+                count = 0
+                for img in allTrained:
                     imgPath = os.path.join(trainedPath, img)
                     with open(imgPath, "rb") as f:
                         body = f.read()
@@ -259,10 +273,12 @@ class Model:
                         )
                         errorCount += 1
                     allCount += 1
+                    show_dynamic_ratio(count, allTrainedLenght)
+                print("\r\n\r\n")
             else:
                 break
             index += 1
-        print(f">>> 检测到已训练数据:{allCount} \n>>> 其中需要重新训练:{errorCount}")
+        print(f">>> 已训练数据总量:{allCount} \n>>> 需要重新训练量:{errorCount}")
 
     def saveTrained(self):
         index = 0
