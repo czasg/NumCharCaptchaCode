@@ -155,7 +155,7 @@ class CNN(Model):
 
         if not self.predictSess:
             prediction = self.model()[1]
-            pre = tf.argmax(tf.reshape(prediction, [-1, self.labelLen, self.labelSet.__len__()]), 2)
+            pre = self.valid(prediction)[0]
             sess = tf.compat.v1.Session()
             sess.run(tf.compat.v1.global_variables_initializer())
             self.predictSess = (sess, pre)
