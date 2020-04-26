@@ -116,32 +116,33 @@ class CNN(Model):
             self.saver(sess, saver)
 
     def keepTrain(self):
-        self.initPath()
-        trainStep, prediction = self.chooseModel()
-        pre, tru, charAccuracy, imgAccuracy, listAccuracy = self.valid(prediction)
-        batch_x, batch_y = self.get_batch()
+        with self.graph.as_default():
+            self.initPath()
+            trainStep, prediction = self.chooseModel()
+            pre, tru, charAccuracy, imgAccuracy, listAccuracy = self.valid(prediction)
+            batch_x, batch_y = self.get_batch()
 
-        with tf.compat.v1.Session() as sess:
-            sess.run(tf.compat.v1.global_variables_initializer())
-            saver = self.saver(sess)
+            with tf.compat.v1.Session() as sess:
+                sess.run(tf.compat.v1.global_variables_initializer())
+                saver = self.saver(sess)
 
-            for index in range(self.cycle_loop):
-                _, listAcc = sess.run([trainStep, listAccuracy], feed_dict={
-                    self.x: batch_x,
-                    self.y: batch_y,
-                    self.keepProb: 0.75
-                })
+                for index in range(self.cycle_loop):
+                    _, listAcc = sess.run([trainStep, listAccuracy], feed_dict={
+                        self.x: batch_x,
+                        self.y: batch_y,
+                        self.keepProb: 0.75
+                    })
 
-                if index % self.stepToShowAcc == 0:
-                    self.trainStepShow(sess, batch_x, batch_y, imgAccuracy, charAccuracy)
+                    if index % self.stepToShowAcc == 0:
+                        self.trainStepShow(sess, batch_x, batch_y, imgAccuracy, charAccuracy)
 
-                batch_x, batch_y = self.keep_batch(batch_x, batch_y, listAcc)
+                    batch_x, batch_y = self.keep_batch(batch_x, batch_y, listAcc)
 
-                if index % self.stepToSaver == 0:
-                    self.saver(sess, saver)
-            self.saver(sess, saver)
-            # self.saveTrained()
-            # self.checkTrained(sess, pre)
+                    if index % self.stepToSaver == 0:
+                        self.saver(sess, saver)
+                self.saver(sess, saver)
+                # self.saveTrained()
+                # self.checkTrained(sess, pre)
 
     @catchErrorAndRetunDefault
     def predict(self, img):
@@ -154,15 +155,16 @@ class CNN(Model):
         imageGray = self.img2gray(imgArray)
 
         if not self.predictSess:
-            prediction = self.model()[1]
-            pre = self.valid(prediction)[0]
-            sess = tf.compat.v1.Session()
-            sess.run(tf.compat.v1.global_variables_initializer())
-            self.predictSess = (sess, pre)
-            self.saver(sess)
-        sess, pre = self.predictSess
-        matList = sess.run(pre, feed_dict={
-            self.x: [self.getBatchX(imageGray)],
-            self.keepProb: 1.
-        })
-        return self.list2text(matList)
+            with self.graph.as_default():
+                prediction = self.model()[1]
+                pre = self.valid(prediction)[0]
+                sess = tf.compat.v1.Session()
+                sess.run(tf.compat.v1.global_variables_initializer())
+                self.predictSess = (sess, pre)
+                self.saver(sess)
+            sess, pre = self.predictSess
+            matList = sess.run(pre, feed_dict={
+                self.x: [self.getBatchX(imageGray)],
+                self.keepProb: 1.
+            })
+            return self.list2text(matList)

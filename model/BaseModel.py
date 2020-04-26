@@ -90,10 +90,12 @@ class Model:
         self.initTensorflow()
 
     def initTensorflow(self):
-        with tf.name_scope('NumCharCC'):
-            self.x = tf.compat.v1.placeholder(tf.float32, [None, self.width * self.height])
-            self.y = tf.compat.v1.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
-            self.keepProb = tf.compat.v1.placeholder(tf.float32)
+        self.graph = tf.Graph()
+        with self.graph.as_default():
+            with tf.name_scope('NumCharCC'):
+                self.x = tf.compat.v1.placeholder(tf.float32, [None, self.width * self.height])
+                self.y = tf.compat.v1.placeholder(tf.float32, [None, self.labelLen * self.labelSet.__len__()])
+                self.keepProb = tf.compat.v1.placeholder(tf.float32)
 
     @staticmethod
     def wxb(w, x, b, activeFunc=lambda x: x):
