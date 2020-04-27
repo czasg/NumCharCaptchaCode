@@ -162,9 +162,9 @@ class CNN(Model):
                 sess.run(tf.compat.v1.global_variables_initializer())
                 self.predictSess = (sess, pre)
                 self.saver(sess)
-            sess, pre = self.predictSess
-            matList = sess.run(pre, feed_dict={
-                self.x: [self.getBatchX(imageGray)],
-                self.keepProb: 1.
-            })
-            return self.list2text(matList)
+        sess, pre = self.predictSess
+        matList = sess.run(pre, feed_dict={
+            self.x: [self.getBatchX(imageGray)],
+            self.keepProb: 1.
+        })
+        return self.list2text(matList)
