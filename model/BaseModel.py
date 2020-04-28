@@ -210,7 +210,7 @@ class Model:
             imageArray = self.img2gray(imageArray)
             batch_x[index, :] = self.getBatchX(imageArray)
             batch_y[index, :] = self.getBatchY(label)
-        print(f">>> 图片准确率: {keepRate: <.3F} - 保留率为: {count}%")
+        print(f">>> 图片准确率: {keepRate: <.3F} - 保留率为: {count}/{preRight.__len__()}")
         return batch_x, batch_y
 
     def testStepShow(self, sess, pre, tru):
