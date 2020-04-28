@@ -192,7 +192,7 @@ class Model:
 
     def keep_batch(self, batch_x: np.array, batch_y: np.array, preRight: np.array):
         count = 0
-        keepRate = np.nonzero(preRight)[0].__len__() / preRight.__len__()
+        keepRate = np.sum(preRight) / preRight.__len__()
         for index, value in enumerate(preRight):
             if value == 1.0:
                 pass
@@ -210,7 +210,7 @@ class Model:
             imageArray = self.img2gray(imageArray)
             batch_x[index, :] = self.getBatchX(imageArray)
             batch_y[index, :] = self.getBatchY(label)
-        print(f"保留率为: {count}%")
+        print(f">>> 图片准确率: {keepRate: <.3F} - 保留率为: {count}%")
         return batch_x, batch_y
 
     def testStepShow(self, sess, pre, tru):
@@ -228,7 +228,7 @@ class Model:
             self.y: batch_y,
             self.keepProb: 1.
         })
-        print(f"训练集 >>> 图片准确率: {acc_image: <.5F} - 字符准确率: {acc_char: <.5F}")
+        print(f"训练集 >>> 图片准确率: {acc_image} - 字符准确率: {acc_char}")
 
     def saver(self, sess, saver=None):
         if saver:
@@ -249,7 +249,7 @@ class Model:
         tru = tf.argmax(truth, 2)  # 实际值
         correctPrediction = tf.equal(pre, tru)
         charAccuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32))  # 单个字符匹配准确率
-        imgAccuracy = tf.reduce_mean(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))  # 全匹配准确率
+        imgAccuracy = tf.reduce_sum(tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1))  # 全匹配准确率
         listAccuracy = tf.reduce_min(tf.cast(correctPrediction, tf.float32), axis=1)  # 匹配值列表
         return pre, tru, charAccuracy, imgAccuracy, listAccuracy
 
