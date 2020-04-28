@@ -136,7 +136,7 @@ class CNN(Model):
                     if index % self.stepToShowAcc == 0:
                         self.trainStepShow(sess, batch_x, batch_y, imgAccuracy, charAccuracy)
 
-                    batch_x, batch_y = self.keep_batch(batch_x, batch_y, listAcc)
+                    batch_x, batch_y = self.keep_batch(batch_x, batch_y, listAcc)  # todo, 此处的保留率和实际精度对不上，是drop的原因还是?
 
                     if index % self.stepToSaver == 0:
                         self.saver(sess, saver)
