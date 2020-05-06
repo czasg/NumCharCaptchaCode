@@ -151,9 +151,9 @@ class Model:
             self.ValidPath.path = self.TrainPath.path
         print(info)
 
-    def checkNewTrainPath(self):
+    def checkNewTrainPath(self, size=1):
         newTrain = os.listdir(self.NewTrainPath.path)
-        if newTrain:
+        if len(newTrain) > size:
             print(f"检测到新的训练数据: {len(newTrain)} 开始转移数据...")
             for img in newTrain:
                 shutil.move(
@@ -170,7 +170,7 @@ class Model:
         return self.label2vec(label, self.labelLen, self.labelSet)
 
     def get_batch(self, test=False, size=100):
-        self.checkNewTrainPath()
+        self.checkNewTrainPath(size)
         batch_x = np.zeros([size, self.height * self.width])
         batch_y = np.zeros([size, self.labelLen * self.labelSet.__len__()])
         for index in range(size):
@@ -191,6 +191,7 @@ class Model:
         return batch_x, batch_y
 
     def keep_batch(self, batch_x: np.array, batch_y: np.array, preRight: np.array):
+        self.checkNewTrainPath(preRight.__len__())
         count = 0
         keepRate = np.sum(preRight) / preRight.__len__()
         for index, value in enumerate(preRight):
