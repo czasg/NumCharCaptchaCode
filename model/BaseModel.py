@@ -43,26 +43,33 @@ class Path:
             self.pool += pool
         random.shuffle(self.pool)
 
-    def yieldBatch(self, pathDir):
+    def yieldBatch(self, pathDir, rotate=False):
         self.setPool(pathDir)
         while True:
             if self.pool:
                 for img in self.pool:
                     image = Image.open(self.toPath(img))
-                    yield img.split("_")[0], np.array(image)
+                    label = img.split("_")[0]
+                    if rotate:
+                        yield label, np.array(image.rotate(5))
+                        yield label, np.array(image.rotate(-5))
+                        yield label, np.array(image.rotate(10))
+                        yield label, np.array(image.rotate(-10))
+                    yield label, np.array(image)
             else:
                 sys.exit(f"{self.name} 数据为空 \n"
                          f"路径: {self.path}")
 
-    def nextCaptcha(self):
+    def nextCaptcha(self, rotate=False):
         if not self.yieldHandler:
-            self.yieldHandler = self.yieldBatch(self.path)
+            self.yieldHandler = self.yieldBatch(self.path, rotate)
         return next(self.yieldHandler)
 
 
 class Model:
     width = None  # 图片宽度
     height = None  # 图片高度
+    rotate = False  # 旋转图片-增加训练集
     labelLen = None  # 标签最大长度
     labelSet = "0123456789abcdefghijklmnopqrstuvwxyz "  # 标签数据集
 
@@ -175,9 +182,9 @@ class Model:
         batch_y = np.zeros([size, self.labelLen * self.labelSet.__len__()])
         for index in range(size):
             if test:
-                label, imageArray = self.ValidPath.nextCaptcha()
+                label, imageArray = self.ValidPath.nextCaptcha(self.rotate)
             else:
-                label, imageArray = self.TrainPath.nextCaptcha()
+                label, imageArray = self.TrainPath.nextCaptcha(self.rotate)
 
             offset = self.labelLen - len(label)
             if offset > 0:
@@ -200,7 +207,7 @@ class Model:
             elif random.random() < keepRate:
                 count += 1
                 continue
-            label, imageArray = self.TrainPath.nextCaptcha()
+            label, imageArray = self.TrainPath.nextCaptcha(self.rotate)
 
             offset = self.labelLen - len(label)
             if offset > 0:

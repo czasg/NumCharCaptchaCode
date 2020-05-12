@@ -5,6 +5,7 @@ from model.cnn.CNN import CNN
 class SuNing(CNN):
     width = 80  # 图片宽度
     height = 30  # 图片高度
+    rotate = True
     labelLen = 4
 
     def __init__(self):
