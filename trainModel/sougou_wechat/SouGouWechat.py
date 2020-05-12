@@ -9,6 +9,7 @@ from trainModel.sougou_wechat.gatherCaptcha.gather import Manager
 class SouGouWeChat(CNN):
     width = 203  # 图片宽度
     height = 66  # 图片高度
+    rotate = True
     labelLen = 7
 
     def __init__(self):
