@@ -9,6 +9,7 @@ class ChuangYu(CNN):
     width = 139  # 图片宽度
     height = 60  # 图片高度
     labelLen = 6
+    rotate = [-3, 3, -6, 6]
 
     def __init__(self):
         super(ChuangYu, self).__init__()

@@ -43,18 +43,15 @@ class Path:
             self.pool += pool
         random.shuffle(self.pool)
 
-    def yieldBatch(self, pathDir, rotate=False):
+    def yieldBatch(self, pathDir, rotate):
         self.setPool(pathDir)
         while True:
             if self.pool:
                 for img in self.pool:
                     image = Image.open(self.toPath(img))
                     label = img.split("_")[0]
-                    if rotate:
-                        yield label, np.array(image.rotate(5))
-                        yield label, np.array(image.rotate(-5))
-                        yield label, np.array(image.rotate(10))
-                        yield label, np.array(image.rotate(-10))
+                    for angle in rotate:
+                        yield label, np.array(image.rotate(angle))
                     yield label, np.array(image)
             else:
                 sys.exit(f"{self.name} 数据为空 \n"
@@ -62,13 +59,19 @@ class Path:
 
     def nextCaptcha(self, rotate=False):
         if not self.yieldHandler:
+            if rotate is True:
+                rotate = [5, -5, 10, -10]
+            elif isinstance(rotate, list):
+                pass
+            else:
+                rotate = []
             self.yieldHandler = self.yieldBatch(self.path, rotate)
         return next(self.yieldHandler)
 
 
 class Model:
-    width = None  # 图片宽度
-    height = None  # 图片高度
+    width = 150  # 图片宽度
+    height = 50  # 图片高度
     rotate = False  # 旋转图片-增加训练集
     labelLen = None  # 标签最大长度
     labelSet = "0123456789abcdefghijklmnopqrstuvwxyz "  # 标签数据集
