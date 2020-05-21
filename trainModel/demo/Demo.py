@@ -3,8 +3,8 @@ from model.cnn.CNN import CNN
 
 
 class Demo(CNN):
-    width = 200  # 图片宽度
-    height = 60  # 图片高度
+    # width = 200  # 图片宽度
+    # height = 60  # 图片高度
     labelLen = 6
 
     def __init__(self):

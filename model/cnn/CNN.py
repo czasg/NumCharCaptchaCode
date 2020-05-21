@@ -133,9 +133,17 @@ class CNN(Model):
                         self.keepProb: 0.75
                     })
                     batch_x, batch_y = self.keep_batch(batch_x, batch_y, listAcc)
+                    if batch_x is None:
+                        break
 
                     if index % self.stepToSaver == 0:
                         self.saver(sess, saver)
+                        acc_char = sess.run(charAccuracy, feed_dict={
+                            self.x: batch_x,
+                            self.y: batch_y,
+                            self.keepProb: 1.
+                        })
+                        print(f">>> 字符准确率: {acc_char: <.3F}")
                 self.saver(sess, saver)
                 # self.saveTrained()
                 # self.checkTrained(sess, pre)

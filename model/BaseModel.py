@@ -43,12 +43,12 @@ class Path:
             self.pool += pool
         random.shuffle(self.pool)
 
-    def yieldBatch(self, pathDir, rotate):
+    def yieldBatch(self, pathDir, rotate, size=()):
         self.setPool(pathDir)
         while True:
             if self.pool:
                 for img in self.pool:
-                    image = Image.open(self.toPath(img))
+                    image = Image.open(self.toPath(img)).resize(size)
                     label = img.split("_")[0]
                     for angle in rotate:
                         yield label, np.array(image.rotate(angle))
@@ -57,7 +57,7 @@ class Path:
                 sys.exit(f"{self.name} 数据为空 \n"
                          f"路径: {self.path}")
 
-    def nextCaptcha(self, rotate=False):
+    def nextCaptcha(self, rotate=False, size=()):
         if not self.yieldHandler:
             if rotate is True:
                 rotate = [5, -5, 10, -10]
@@ -65,7 +65,7 @@ class Path:
                 pass
             else:
                 rotate = []
-            self.yieldHandler = self.yieldBatch(self.path, rotate)
+            self.yieldHandler = self.yieldBatch(self.path, rotate, size)
         return next(self.yieldHandler)
 
 
@@ -79,6 +79,8 @@ class Model:
     stepToSaver = 500  # 保存模型step
     stepToShowAcc = 10  # 打印准确率step
     cycle_loop = 20000  # 训练次数
+    accToStop = 0.99  # 当训练精度达到此标准，累计`stepToSaver`次后，会停止训练
+    __accRightCount = 0
 
     class ModelPathClass(Path):
         name = "模型文件夹"
@@ -185,9 +187,9 @@ class Model:
         batch_y = np.zeros([size, self.labelLen * self.labelSet.__len__()])
         for index in range(size):
             if test:
-                label, imageArray = self.ValidPath.nextCaptcha(self.rotate)
+                label, imageArray = self.ValidPath.nextCaptcha(rotate=self.rotate, size=(self.width, self.height))
             else:
-                label, imageArray = self.TrainPath.nextCaptcha(self.rotate)
+                label, imageArray = self.TrainPath.nextCaptcha(rotate=self.rotate, size=(self.width, self.height))
 
             offset = self.labelLen - len(label)
             if offset > 0:
@@ -210,7 +212,7 @@ class Model:
             elif random.random() < keepRate:
                 count += 1
                 continue
-            label, imageArray = self.TrainPath.nextCaptcha(self.rotate)
+            label, imageArray = self.TrainPath.nextCaptcha(rotate=self.rotate, size=(self.width, self.height))
 
             offset = self.labelLen - len(label)
             if offset > 0:
@@ -222,6 +224,10 @@ class Model:
             batch_x[index, :] = self.getBatchX(imageArray)
             batch_y[index, :] = self.getBatchY(label)
         print(f">>> 图片准确率: {keepRate: <.3F} - 保留率为: {count}/{preRight.__len__()}")
+        if keepRate >= self.accToStop:
+            self.__accRightCount += 1
+            if self.__accRightCount >= self.stepToSaver:
+                return None, None
         return batch_x, batch_y
 
     def testStepShow(self, sess, pre, tru):
